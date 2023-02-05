@@ -1,6 +1,8 @@
 import os
 import warnings
 from dataclasses import dataclass
+from datetime import datetime
+
 from typing import Optional
 
 import pandas as pd
@@ -61,8 +63,11 @@ class API:
         route: str,
         series: str,
         frequency: str,
+        start_date: str,
+        stop_date: str,
         facet: str = "series",
         new_name: str = "",
+        
     ) -> pd.DataFrame:
         """
         Returns data for a given series in the newer APIv2 format.
@@ -73,6 +78,8 @@ class API:
             frequency (str): The frequency of the series. For example, "daily".
             facet (str): The facet of the series. For example, "series", "seriesId".
             new_name (str): A name you want to give the value column.
+            start_date (datetime): The starting date of wanted data.
+            stop_date (datetime): The stop date of wanted data.
         Returns:
             pd.DataFrame: A DataFrame with the date and value columns.
         """
@@ -81,7 +88,13 @@ class API:
         api_route = f"{route}/data/?api_key={self.token}&data[]=value&frequency={frequency}"
         series = f"&facets[{facet}][]={series}"
         sort = "&sort[0][column]=period&sort[0][direction]=desc"
-        url = f"{self.url}{api_route}{series}{sort}"
+        period_start = f"&start={start_date}" if start_date is not None else ""
+        period_stop = f"&end={stop_date}" if stop_date is not None else ""
+        period = period_start+period_stop
+
+        
+        url = f"{self.url}{api_route}{period}{series}{sort}"
+
 
         response = requests.get(url, headers=headers)
         response.raise_for_status()
@@ -104,7 +117,7 @@ class API:
 
         df.rename(columns={df.columns[1]: name}, inplace=True)
 
-        df = df.iloc[:, :2]
+        #df = df.iloc[:, :2]
 
         df.rename(columns={df.columns[0]: "Date"}, inplace=True)
         df["Date"] = pd.to_datetime(df["Date"])
